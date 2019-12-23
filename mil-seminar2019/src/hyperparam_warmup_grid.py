@@ -61,12 +61,15 @@ def test(args, model, device, test_loader):
         100. * correct / len(test_loader.dataset)))
 
 def wrap_scheduler(initial_lr, first_time, second_time, third_time, epoch):
-    if epoch <= first_time:
+    first_epoch = int(epochs_num*first_time)
+    second_epoch = int(epochs_num*second_time)
+    third_epoch = int(epochs_num*third_time)
+    if epoch <= first_epoch:
         return 10**(-2.0+0.4*epoch)*initial_lr
     x = initial_lr * 5
-    if epoch >= second_time:
+    if epoch >= second_epoch:
         x /= 5
-    if epoch >= third_time:
+    if epoch >= third_epoch:
         x /= 5
     return x
 
@@ -79,12 +82,10 @@ def tune_hyperparams(args, task, preprocess_func, model):
 
     # TODO: Implement hyperparameter tuning
 
-
-
     init_lr_list = [0.001, 0.01, 0.1]
-    first_time = [5, 6, 7]
-    second_time = [40, 50, 60]
-    third_time = [70, 80, 90]
+    first_time = [0.05, 0.1, 0.2]
+    second_time = [0.4, 0.5, 0.6]
+    third_time = [0.7, 0.8, 0.9]
     accuracy = 0
     pre_accuracy = 0
     for i in init_lr_list:
@@ -108,9 +109,10 @@ def tune_hyperparams(args, task, preprocess_func, model):
     Hyperparams.hyperparam1 = result_first_time
     Hyperparams.hyperparam2 = result_second_time
     Hyperparams.hyperparam3 = result_third_time
-    hyperparams = Hyperparams()
 
-    return hyperparams
+    param_list = [result_init_lr, result_first_time, result_seconde_time, result_third_time]
+
+    return param_list
     print(hyperparams)
 
 if __name__ == '__main__':
@@ -185,6 +187,8 @@ if __name__ == '__main__':
 
     device = torch.device("cuda" if use_cuda else "cpu")
 
+    epochs_num = args.epochs
+
     ############################################################
     # Instantiate task object
     task = Task(args.task)
@@ -222,8 +226,7 @@ if __name__ == '__main__':
     hyperparam = tune_hyperparams(args, task, preprocess_func, model)
     ############################################################
 
-    for epoch in range(1, args.epochs + 1):
-        warmup_lr = wrap_scheduler(hyperparam.hyperparam0, hyperparam.hyperparam1, hyperparam.hyperparam2, hypreparam.hyperparam3, epoch)
-        optimizer = optim.Adadelta(model.parameters(), lr=warmup_lr)
-        train(args, model, device, train_loader, optimizer, epoch)
-        test(args, model, device, test_loader)
+    warmup_lr = wrap_scheduler(hyperparam[0], hyperparam[1], hyperparam[2], hypreparam[3], epoch)
+    optimizer = optim.Adadelta(model.parameters(), lr=warmup_lr)
+    train(args, model, device, train_loader, optimizer, epoch)
+    test(args, model, device, test_loader)

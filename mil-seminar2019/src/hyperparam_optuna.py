@@ -123,9 +123,11 @@ def tune_hyperparams(args: Namespace, task: Task, preprocess_func: Compose, mode
     #Hyperparams.hyperparam2 = bo.max['params']['second_time']
     #Hyperparams.hyperparam3 = bo.max['params']['third_time']
 
-    hyperparams = Hyperparams()
+    #hyperparams = Hyperparams()
 
-    return hyperparams
+    param_list = [study.best_params['initial_lr'], study.best_params['first_time'], study.best_params['second_time']]
+
+    return param_list
 
 if __name__ == '__main__':
     '''
@@ -275,8 +277,7 @@ if __name__ == '__main__':
     hyperparam = tune_hyperparams(args, task, preprocess_func, model)
     ############################################################
 
-    for epoch in range(1, args.epochs + 1):
-        warmup_lr = wrap_lr(hyperparam.hyperparam0, hyperparam.hyperparam1, hyperparam.hyperparam2, epoch)
-        optimizer = optim.Adadelta(model.parameters(), lr=warmup_lr)
-        train(args, model, device, train_loader, optimizer, epoch)
-        test(args, model, device, test_loader)
+    warmup_lr = wrap_lr(hyperparam.hyperparam0, hyperparam.hyperparam1, hyperparam.hyperparam2, epoch)
+    optimizer = optim.Adadelta(model.parameters(), lr=warmup_lr)
+    train(args, model, device, train_loader, optimizer, epoch)
+    test(args, model, device, test_loader)

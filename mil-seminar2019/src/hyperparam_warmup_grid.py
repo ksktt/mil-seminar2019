@@ -6,7 +6,7 @@ from task import Task
 from bayes_opt import BayesianOptimization
 from torch.utils.data.dataset import Subset
 
-from data import CifarDataset
+#from data import CifarDataset
 
 class Hyperparams:
     ''' Hyperparameter class
@@ -56,9 +56,27 @@ def test(args, model, device, test_loader):
     test_loss /= len(test_loader.dataset)
 
     return correct/len(test_loader.dataset)
+
+def print_test(args, model, device, test_loader):
+    model.eval()
+    test_loss = 0
+    correct = 0
+    with torch.no_grad():
+        for data, target in test_loader:
+            data, target = data.to(device), target.to(device)
+            output = model(data)
+            # sum up batch loss
+            test_loss += F.nll_loss(output, target, reduction='sum').item()
+            # get the index of the max log-probability
+            pred = output.argmax(dim=1, keepdim=True)
+            correct += pred.eq(target.view_as(pred)).sum().item()
+
+    test_loss /= len(test_loader.dataset)
+
     print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
         test_loss, correct, len(test_loader.dataset),
         100. * correct / len(test_loader.dataset)))
+
 
 def wrap_scheduler(initial_lr, first_time, second_time, third_time, epoch):
     first_epoch = int(epochs_num*first_time)
@@ -66,12 +84,10 @@ def wrap_scheduler(initial_lr, first_time, second_time, third_time, epoch):
     third_epoch = int(epochs_num*third_time)
     if epoch <= first_epoch:
         return 10**(-2.0+0.4*epoch)*initial_lr
-    x = initial_lr * 5
     if epoch >= second_epoch:
-        x /= 5
+        return 10**(-2.0+0.4*first_epoch)*initial_lr
     if epoch >= third_epoch:
-        x /= 5
-    return x
+        return 10**(-2.0+0.4*first_epoch)*initial_lr / 10
 
 def tune_hyperparams(args, task, preprocess_func, model):
     ''' Tune hyperparameters
@@ -82,7 +98,7 @@ def tune_hyperparams(args, task, preprocess_func, model):
 
     # TODO: Implement hyperparameter tuning
 
-    init_lr_list = [0.001, 0.01, 0.1]
+    init_lr_list = [0.001, 0.01]
     first_time = [0.05, 0.1, 0.2]
     second_time = [0.4, 0.5, 0.6]
     third_time = [0.7, 0.8, 0.9]
@@ -93,8 +109,9 @@ def tune_hyperparams(args, task, preprocess_func, model):
             for k in second_time:
                 for l in third_time:
                     for epoch in range(1, args.epochs + 1):
+                        copied_model = init_model
                         warmup_lr = wrap_scheduler(i, j, k, l, epoch)
-                        optimizer = optim.Adadelta(model.parameters(), lr=warmup_lr)
+                        optimizer = optim.Adadelta(copied_model, lr=warmup_lr)
                         train(args, model, device, train_loader, optimizer, epoch)
                         accuracy = test(args, model, device, test_loader)
 
@@ -110,10 +127,10 @@ def tune_hyperparams(args, task, preprocess_func, model):
     Hyperparams.hyperparam2 = result_second_time
     Hyperparams.hyperparam3 = result_third_time
 
-    param_list = [result_init_lr, result_first_time, result_seconde_time, result_third_time]
+    param_list = [result_init_lr, result_first_time, result_second_time, result_third_time]
 
     return param_list
-    print(hyperparams)
+    #print(hyperparams)
 
 if __name__ == '__main__':
     '''
@@ -223,10 +240,9 @@ if __name__ == '__main__':
     preprocess_func = Compose([transforms.ToTensor(), ])
     model = Net().to(device)
 
+    init_model = model.parameters()
+
     hyperparam = tune_hyperparams(args, task, preprocess_func, model)
     ############################################################
 
-    warmup_lr = wrap_scheduler(hyperparam[0], hyperparam[1], hyperparam[2], hypreparam[3], epoch)
-    optimizer = optim.Adadelta(model.parameters(), lr=warmup_lr)
-    train(args, model, device, train_loader, optimizer, epoch)
-    test(args, model, device, test_loader)
+    print_test(args, model, device, test_loader)

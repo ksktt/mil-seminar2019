@@ -5,8 +5,8 @@ from torchvision.transforms import Compose
 from task import Task
 from bayes_opt import BayesianOptimization
 from torch.utils.data.dataset import Subset
-
-#from data import CifarDataset
+from data import CifarDataset
+import torch
 
 class Hyperparams:
     ''' Hyperparameter class
@@ -82,12 +82,14 @@ def wrap_scheduler(initial_lr, first_time, second_time, third_time, epoch):
     first_epoch = int(epochs_num*first_time)
     second_epoch = int(epochs_num*second_time)
     third_epoch = int(epochs_num*third_time)
-    if epoch <= first_epoch:
-        return 10**(-2.0+0.4*epoch)*initial_lr
-    if epoch >= second_epoch:
-        return 10**(-2.0+0.4*first_epoch)*initial_lr
-    if epoch >= third_epoch:
-        return 10**(-2.0+0.4*first_epoch)*initial_lr / 10
+    if epoch / epochs_num <= first_time:
+        return 10**(-2.0+4*(epoch / epochs_num))*initial_lr
+    elif epoch / epochs_num <= second_time:
+        return 10**(-2.0+4*first_time)*initial_lr
+    elif epoch / epochs_num <= third_time:
+        return 10**(-2.0+4*first_time)*initial_lr / 5
+    elif epoch / epochs_num >third_time:
+        return 10**(-2.0+4*first_time)*initial_lr / (5*5)
 
 def tune_hyperparams(args, task, preprocess_func, model):
     ''' Tune hyperparameters
@@ -109,9 +111,9 @@ def tune_hyperparams(args, task, preprocess_func, model):
             for k in second_time:
                 for l in third_time:
                     for epoch in range(1, args.epochs + 1):
-                        copied_model = init_model
                         warmup_lr = wrap_scheduler(i, j, k, l, epoch)
-                        optimizer = optim.Adadelta(copied_model, lr=warmup_lr)
+                        model.load_state_dict(torch.load('init_model'))
+                        optimizer = optim.Adadelta(model.parameters(), lr=warmup_lr)
                         train(args, model, device, train_loader, optimizer, epoch)
                         accuracy = test(args, model, device, test_loader)
 
@@ -236,11 +238,25 @@ if __name__ == '__main__':
     train_dataset_loader = torch.utils.data.DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
     val_dataset_loader = torch.utils.data.DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False)
 
+    """
+    transform = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize((0.5,0.5,0.5),(0.5,0.5,0.5))])
+
+    train_dataset = CifarDataset(transform, 'train', '/data/unagi0/ktokitake/cifar100/data')
+    val_dataset = CifarDataset(transform, 'val', '/data/unagi0/ktokitake/cifar100/data')
+    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers =2)
+    val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False, num_workers =2)
+
+    test_dataset = CifarDataset(transform, 'test', '/data/unagi0/ktokitake/cifar100/data')
+    test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, num_workers =2)
+    """
+
     # Dummy preprocess and model
     preprocess_func = Compose([transforms.ToTensor(), ])
     model = Net().to(device)
 
-    init_model = model.parameters()
+    torch.save(model.state_dict(), 'init_model')
 
     hyperparam = tune_hyperparams(args, task, preprocess_func, model)
     ############################################################

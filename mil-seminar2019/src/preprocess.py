@@ -148,11 +148,11 @@ def select_preprocess(args: Namespace, task: Task,device,kwargs) -> Compose:
         preprocess_func = Compose([transforms.ToTensor(),transforms.Normalize((mean1,mean2,mean3),(std1,std2,std3))])
 
         train_loader = torch.utils.data.DataLoader(
-            datasets.CIFAR100('../data', train=True, download=True,
+            datasets.CIFAR100(root=args.data, train=True, download=True,
                             transform=preprocess_func),
             batch_size=64, shuffle=True, **kwargs)
         test_loader = torch.utils.data.DataLoader(
-            datasets.CIFAR100('../data', train=False,
+            datasets.CIFAR100(root=args.data, train=False,
                             transform=preprocess_func),
             batch_size=1000, shuffle=True, **kwargs)
 

@@ -3,7 +3,7 @@ import sys
 import time
 import glob
 import numpy as np
-import torch
+import torchimport torchvision.models as models
 import utils
 import logging
 import argparse
@@ -93,6 +93,14 @@ def infer(args,valid_queue, model, criterion):
     return top1.avg, objs.avg
 
 def nas(args:Namespace,task: Task, preprocess_func: Compose) -> Module:
+    if args.resnet == True:
+        model = models.resnet152()
+        if task.name == 'cifar100':
+            model.fc = nn.Linear(2048,100)
+        elif task.name == 'cifar10':
+            model.fc = nn.Linear(2048,10)
+        return model
+    
     ''' Network Architecture Search method                                                                           
                                                                                                                      
     Given task and preprocess function, this method returns a model output by NAS.                                   

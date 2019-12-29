@@ -100,15 +100,28 @@ def tune_hyperparams(args, task, preprocess_func, model):
 
     # TODO: Implement hyperparameter tuning
 
-    train_dataset = CifarDataset(transform=preprocess_func, 'train', '/data/unagi0/ktokitake/cifar100/data')
-    val_dataset = CifarDataset(transform=preprocess_func, 'val', '/data/unagi0/ktokitake/cifar100/data')
-    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers =2)
-    val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False, num_workers =2)
+    kwargs = {'num_workers': 1, 'pin_memory': True} if use_cuda else {}
+    train_loader = torch.utils.data.DataLoader(
+        datasets.CIFAR100('../data', train=True, download=True,
+                       transform=preprocess_func),
+        batch_size=args.batch_size, shuffle=True, **kwargs)
+    test_loader = torch.utils.data.DataLoader(
+        datasets.CIFAR100('../data', train=False, transform=preprocess_func,
+        batch_size=args.test_batch_size, shuffle=True, **kwargs)
 
-    test_dataset = CifarDataset(transform=preprocess_func, 'test', '/data/unagi0/ktokitake/cifar100/data')
-    test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, num_workers =2)
+    n_samples = len(train_loader.dataset)
+    train_size = int(n_samples / 5)
+    subset1_indices = list(range(0,train_size))
+    subset2_indices = list(range(train_size,n_samples))
+
+    train_dataset = Subset(train_loader.dataset, subset1_indices)
+    val_dataset   = Subset(train_loader.dataset, subset2_indices)
+
+    train_dataset_loader = torch.utils.data.DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
+    val_dataset_loader = torch.utils.data.DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False)
 
     torch.save(model.state_dict(), 'init_model')
+    
     init_lr_list = [0.001, 0.01]
     first_time = [0.05, 0.1, 0.2]
     second_time = [0.4, 0.5, 0.6]
@@ -132,6 +145,7 @@ def tune_hyperparams(args, task, preprocess_func, model):
                         result_second_time = k
                         result_third_time = l
                         pre_accuracy = accuracy
+                        torch.save(model.state_dict(), 'learned_model')
 
     Hyperparams.hyperparam0 = result_init_lr
     Hyperparams.hyperparam1 = result_first_time

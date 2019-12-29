@@ -100,6 +100,15 @@ def tune_hyperparams(args, task, preprocess_func, model):
 
     # TODO: Implement hyperparameter tuning
 
+    train_dataset = CifarDataset(transform=preprocess_func, 'train', '/data/unagi0/ktokitake/cifar100/data')
+    val_dataset = CifarDataset(transform=preprocess_func, 'val', '/data/unagi0/ktokitake/cifar100/data')
+    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers =2)
+    val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False, num_workers =2)
+
+    test_dataset = CifarDataset(transform=preprocess_func, 'test', '/data/unagi0/ktokitake/cifar100/data')
+    test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, num_workers =2)
+
+    torch.save(model.state_dict(), 'init_model')
     init_lr_list = [0.001, 0.01]
     first_time = [0.05, 0.1, 0.2]
     second_time = [0.4, 0.5, 0.6]
@@ -212,6 +221,7 @@ if __name__ == '__main__':
     # Instantiate task object
     task = Task(args.task)
 
+    """
     kwargs = {'num_workers': 1, 'pin_memory': True} if use_cuda else {}
     train_loader = torch.utils.data.DataLoader(
         datasets.CIFAR100('../data', train=True, download=True,
@@ -237,6 +247,7 @@ if __name__ == '__main__':
 
     train_dataset_loader = torch.utils.data.DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
     val_dataset_loader = torch.utils.data.DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False)
+    """
 
     """
     transform = transforms.Compose([
@@ -256,7 +267,7 @@ if __name__ == '__main__':
     preprocess_func = Compose([transforms.ToTensor(), ])
     model = Net().to(device)
 
-    torch.save(model.state_dict(), 'init_model')
+    #torch.save(model.state_dict(), 'init_model')
 
     hyperparam = tune_hyperparams(args, task, preprocess_func, model)
     ############################################################

@@ -121,7 +121,7 @@ def tune_hyperparams(args, task, preprocess_func, model):
     val_dataset_loader = torch.utils.data.DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False)
 
     torch.save(model.state_dict(), 'init_model')
-    
+
     init_lr_list = [0.001, 0.01]
     first_time = [0.05, 0.1, 0.2]
     second_time = [0.4, 0.5, 0.6]
@@ -132,9 +132,9 @@ def tune_hyperparams(args, task, preprocess_func, model):
         for j in first_time:
             for k in second_time:
                 for l in third_time:
+                    model.load_state_dict(torch.load('init_model'))
                     for epoch in range(1, args.epochs + 1):
                         warmup_lr = wrap_scheduler(i, j, k, l, epoch)
-                        model.load_state_dict(torch.load('init_model'))
                         optimizer = optim.Adadelta(model.parameters(), lr=warmup_lr)
                         train(args, model, device, train_loader, optimizer, epoch)
                         accuracy = test(args, model, device, test_loader)

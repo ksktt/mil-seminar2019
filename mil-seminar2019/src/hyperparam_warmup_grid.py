@@ -77,19 +77,18 @@ def print_test(args, model, device, test_loader):
         test_loss, correct, len(test_loader.dataset),
         100. * correct / len(test_loader.dataset)))
 
-
 def wrap_scheduler(initial_lr, first_time, second_time, third_time, epoch):
     first_epoch = int(epochs_num*first_time)
     second_epoch = int(epochs_num*second_time)
     third_epoch = int(epochs_num*third_time)
     if epoch / epochs_num <= first_time:
-        return 10**(-2.0+4*(epoch / epochs_num))*initial_lr
+        return (10**(-2.0+2.0*(epoch / first_epoch)))*initial_lr
     elif epoch / epochs_num <= second_time:
-        return 10**(-2.0+4*first_time)*initial_lr
+        return initial_lr
     elif epoch / epochs_num <= third_time:
-        return 10**(-2.0+4*first_time)*initial_lr / 5
+        return initial_lr / 5
     elif epoch / epochs_num >third_time:
-        return 10**(-2.0+4*first_time)*initial_lr / (5*5)
+        return initial_lr / (5*5)
 
 def tune_hyperparams(args, task, preprocess_func, model):
     ''' Tune hyperparameters

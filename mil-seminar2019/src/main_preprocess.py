@@ -9,7 +9,7 @@ from torchvision.transforms import Compose
 import optuna
 optuna.logging.disable_default_handler()
 
-from hyperparam import tune_hyperparams
+from hyperparam_warmup_grid import tune_hyperparams
 from nas import nas
 from preprocess import select_preprocess
 from task import Task
@@ -73,9 +73,9 @@ def test(args, model, device, test_loader):
         for data, target in test_loader:
             data, target = data.to(device), target.to(device)
             output = model(data)
-            # sum up batch loss                                                                                                                                                                           
+            # sum up batch loss
             test_loss += F.nll_loss(output, target, reduction='sum').item()
-            # get the index of the max log-probability                                                                                                                     
+            # get the index of the max log-probability
             pred = output.argmax(dim=1, keepdim=True)
             correct += pred.eq(target.view_as(pred)).sum().item()
 
@@ -89,17 +89,17 @@ def test(args, model, device, test_loader):
 
 
 def main():
-    '''Auto Kaggle Solver                                                                                                                                
-    Given task specifications, determine optimal preprocess, network architecture, and hyperparameters automatically.                                                    
-                                                                                                                                                                                                         
+    '''Auto Kaggle Solver
+    Given task specifications, determine optimal preprocess, network architecture, and hyperparameters automatically.
+
     '''
 
-    # Select optimal preprocess                                                                                                                                                                          
+    # Select optimal preprocess
     print('Start preprocess selection.')
     preprocess_func = select_preprocess(args, task,device,kwargs)
     print('Finished.')
 
-    # Design optimal network architecture                                                                                                                                                                 
+    # Design optimal network architecture
     print('Start Network Architecture search.')
     model = nas(args, task, preprocess_func)
     print('Finished.')
@@ -165,7 +165,7 @@ if __name__ == '__main__':
 
     device = torch.device("cuda" if use_cuda else "cpu")
 
-    # Instantiate task object                                                                                                                                                                            
+    # Instantiate task object
     task = Task(args.task)
 
     kwargs = {'num_workers': 1, 'pin_memory': True} if use_cuda else {}

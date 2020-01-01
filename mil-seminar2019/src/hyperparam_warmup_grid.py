@@ -105,7 +105,7 @@ def tune_hyperparams(args, task, preprocess_func, model):
                        transform=preprocess_func),
         batch_size=args.batch_size, shuffle=True, **kwargs)
     test_loader = torch.utils.data.DataLoader(
-        datasets.CIFAR100('../data', train=False, transform=preprocess_func,
+        datasets.CIFAR100('../data', train=False, transform=preprocess_func),
         batch_size=args.test_batch_size, shuffle=True, **kwargs)
 
     n_samples = len(train_loader.dataset)

@@ -136,7 +136,8 @@ def tune_hyperparams(args, task, preprocess_func, model):
                         warmup_lr = wrap_scheduler(i, j, k, l, epoch)
                         optimizer = optim.Adadelta(model.parameters(), lr=warmup_lr)
                         train(args, model, device, train_loader, optimizer, epoch)
-                        accuracy = test(args, model, device, test_loader)
+
+                    accuracy = test(args, model, device, test_loader)
 
                     if accuracy > pre_accuracy:
                         result_init_lr = i
@@ -285,4 +286,4 @@ if __name__ == '__main__':
     hyperparam = tune_hyperparams(args, task, preprocess_func, model)
     ############################################################
 
-    print_test(args, model, device, test_loader)
+    #print_test(args, model, device, test_loader)

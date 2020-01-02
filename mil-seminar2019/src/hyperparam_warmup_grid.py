@@ -99,7 +99,7 @@ def tune_hyperparams(args, task, preprocess_func, model):
 
     # TODO: Implement hyperparameter tuning
 
-    kwargs = {'num_workers': 1, 'pin_memory': True} if use_cuda else {}
+    kwargs = {'num_workers': 1, 'pin_memory': False} if use_cuda else {}
     train_loader = torch.utils.data.DataLoader(
         datasets.CIFAR100('../data', train=True, download=True,
                        transform=preprocess_func),

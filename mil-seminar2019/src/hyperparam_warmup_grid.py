@@ -90,7 +90,7 @@ def wrap_scheduler(initial_lr, first_time, second_time, third_time, epoch):
     elif epoch / epochs_num >third_time:
         return initial_lr / (5*5)
 
-def tune_hyperparams(args, task, preprocess_func, model):
+def tune_hyperparams(args, task, preprocess_func, model, device):
     ''' Tune hyperparameters
 
     Given task, preprocess function, and model, this method returns tuned hyperparameters.
@@ -283,7 +283,7 @@ if __name__ == '__main__':
 
     #torch.save(model.state_dict(), 'init_model')
 
-    hyperparam = tune_hyperparams(args, task, preprocess_func, model)
+    hyperparam = tune_hyperparams(args, task, preprocess_func, model, device)
     ############################################################
 
     #print_test(args, model, device, test_loader)

@@ -12,13 +12,18 @@ import torch.utils
 import torch.nn.functional as F
 import torchvision.datasets as dset
 import torch.backends.cudnn as cudnn
+
 from model_search import Network
 from architect import Architect
+
 from model import NetworkCIFAR as NetworkClassification
+
 from argparse import Namespace
+
 import torch.nn as nn
 from torch.nn import Module
 from torchvision.transforms import Compose
+
 from task import Task
 
 def train(args,train_queue, valid_queue, model, architect, criterion, optimizer, lr):
@@ -62,6 +67,7 @@ def train(args,train_queue, valid_queue, model, architect, criterion, optimizer,
 
     return top1.avg, objs.avg
 
+
 def infer(args,valid_queue, model, criterion):
     objs = utils.AvgrageMeter()
     top1 = utils.AvgrageMeter()
@@ -87,12 +93,14 @@ def infer(args,valid_queue, model, criterion):
     return top1.avg, objs.avg
 
 def nas(args:Namespace,task: Task, preprocess_func: Compose) -> Module:
-    ''' Network Architecture Search methods
-    Given task and preprocess function, this method returns a model output by NAS.
-    The implementation of DARTS is available at https://github.com/alphadl/darts.pytorch1.1
+    ''' Network Architecture Search method                                                                           
+                                                                                                                     
+    Given task and preprocess function, this method returns a model output by NAS.                                   
+                                                                                                                     
+    The implementation of DARTS is available at https://github.com/alphadl/darts.pytorch1.1                          
     '''
-    
-    # TODO: Replace model with the output by NAS
+
+    # TODO: Replace model with the output by NAS                                                                     
 
     args.save = 'search-{}-{}'.format(args.save, time.strftime("%Y%m%d-%H%M%S"))
     utils.create_exp_dir(args.save, scripts_to_save=glob.glob('*.py'))
@@ -111,18 +119,19 @@ def nas(args:Namespace,task: Task, preprocess_func: Compose) -> Module:
         sys.exit(1)
 
     np.random.seed(args.seed)
-    # torch.cuda.set_device(args.gpu)
-    #gpus = [int(args.gpu)]
+    # torch.cuda.set_device(args.gpu)                                                                                
+    #gpus = [int(args.gpu)]                                                                                          
     gpus = [int(i) for i in args.gpu.split(',')]
     if len(gpus) == 1:
         torch.cuda.set_device(int(args.gpu))
 
-    # cudnn.benchmark = True
+    # cudnn.benchmark = True                                                                                         
     torch.manual_seed(args.seed)
-    # cudnn.enabled=True
+    # cudnn.enabled=True                                                                                             
     torch.cuda.manual_seed(args.seed)
     logging.info('gpu device = %s' % args.gpu)
     logging.info("args = %s", args)
+
 
     criterion = nn.CrossEntropyLoss()
     criterion = criterion.cuda()
@@ -140,7 +149,7 @@ def nas(args:Namespace,task: Task, preprocess_func: Compose) -> Module:
     logging.info("param size = %fMB", utils.count_parameters_in_MB(model))
 
     optimizer = torch.optim.SGD(
-        # model.parameters(),
+        # model.parameters(),                                                                                        
         weight_params,
         args.learning_rate,
         momentum=args.momentum,
@@ -148,9 +157,10 @@ def nas(args:Namespace,task: Task, preprocess_func: Compose) -> Module:
     optimizer = nn.DataParallel(optimizer, device_ids=gpus)
 
     if task.name == 'cifar100':
-        train_data = dset.CIFAR100(root=args.data, train=True, download=True, transform=preprocess_func)
+        train_data = dset.CIFAR100(root=args.data, train=True, download=True, transform=preprocess_func)            
         #train_transform, valid_transform = utils._data_transforms_cifar10(args)
         #train_data = dset.CIFAR100(root=args.data, train=True, download=True, transform=train_transform)
+
 
     elif task.name=='cifar10':
         train_data = dset.CIFAR10(root=args.data, train=True, download=True, transform=preprocess_func)
@@ -185,11 +195,11 @@ def nas(args:Namespace,task: Task, preprocess_func: Compose) -> Module:
         print(F.softmax(model.alphas_normal, dim=-1))
         print(F.softmax(model.alphas_reduce, dim=-1))
 
-        # training
+        # training                                                                                                   
         train_acc, train_obj = train(args,train_queue, valid_queue, model, architect, criterion, optimizer, lr)
         logging.info('train_acc %f', train_acc)
 
-        # validation
+        # validation                                                                                                 
         with torch.no_grad():
             valid_acc, valid_obj = infer(args,valid_queue, model, criterion)
         logging.info('valid_acc %f', valid_acc)
@@ -202,5 +212,5 @@ def nas(args:Namespace,task: Task, preprocess_func: Compose) -> Module:
     logging.info('genotype = %s',genotype)
 
     model = NetworkClassification(36,task.n_classes,20,False,genotype)
-
+    
     return model

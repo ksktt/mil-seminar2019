@@ -6,7 +6,6 @@ from task import Task
 from bayes_opt import BayesianOptimization
 from trainer import Trainer
 from torch.utils.data.dataset import Subset
-
 import optuna
 
 from data import CifarDataset

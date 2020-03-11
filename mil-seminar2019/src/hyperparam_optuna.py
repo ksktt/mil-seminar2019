@@ -3,8 +3,7 @@ from torch.nn import Module
 import torchvision.transforms as transforms
 from torchvision.transforms import Compose
 from task import Task
-from bayes_opt import BayesianOptimization
-from trainer import Trainer
+#from trainer import Trainer
 from torch.utils.data.dataset import Subset
 import optuna
 

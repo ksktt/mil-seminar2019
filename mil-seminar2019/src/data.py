@@ -6,7 +6,7 @@ from collections import defaultdict
 
 
 class CifarDataset(torch.utils.data.Dataset):
-    def __init__(self, transform=None, split='train',split_rate=0.8, data_dir='/Users/kusakatakuya/mil-seminar2019/mil-seminar2019/data/cifar-100-pythion'):
+    def __init__(self, transform=None, split='train',split_rate=0.8, data_dir='/Users/kusakatakuya/mil-seminar2019/mil-seminar2019/data/cifar100'):
         super(CifarDataset, self).__init__()
         data_path = os.path.join(data_dir, split+'.pkl')
         with open(data_path, 'rb') as f:

@@ -9,6 +9,56 @@ import optuna
 
 from data import CifarDataset
 
+def train(args, model, device, train_loader, optimizer, epoch):
+        model.train()
+        for batch_idx, (fname, data, target) in enumerate(train_loader):
+            data, target = data.to(device), target.to(device)
+            optimizer.zero_grad()
+            output = model(data)
+            loss = F.nll_loss(output, target)
+            loss.backward()
+            optimizer.step()
+            if batch_idx % args.log_interval == 0:
+                print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
+                    epoch, batch_idx * len(data), len(train_loader.dataset),
+                    100. * batch_idx / len(train_loader), loss.item()))
+
+def test(args, model, device, test_loader):
+        model.eval()
+        test_loss = 0
+        correct = 0
+        with torch.no_grad():
+            for fname, data, target in test_loader:
+                data, target = data.to(device), target.to(device)
+                output = model(data)
+                # sum up batch loss
+                test_loss += F.nll_loss(output, target, reduction='sum').item()
+                # get the index of the max log-probability
+                pred = output.argmax(dim=1, keepdim=True)
+                correct += pred.eq(target.view_as(pred)).sum().item()
+
+        test_loss /= len(test_loader.dataset)
+
+        #return correct/len(test_loader.dataset)
+        print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
+            test_loss, correct, len(test_loader.dataset),
+            100. * correct / len(test_loader.dataset)))
+
+"""
+def wrap_scheduler(initial_lr, first_time, second_time, third_time, epoch):
+    first_epoch = int(epochs_num*first_time)
+    second_epoch = int(epochs_num*second_time)
+    third_epoch = int(epochs_num*third_time)
+    if epoch / epochs_num <= first_time:
+        return (10**(-2.0+2.0*(epoch / first_epoch)))*initial_lr
+    elif epoch / epochs_num <= second_time:
+        return initial_lr
+    elif epoch / epochs_num <= third_time:
+        return initial_lr / 5
+    elif epoch / epochs_num >third_time:
+        return initial_lr / (5*5)
+"""
+
 def wrap_scheduler(initial_lr, first_time, second_time):
     accuracy = 0
     max_accuracy = 0
@@ -27,7 +77,7 @@ def wrap_scheduler(initial_lr, first_time, second_time):
         optimizer = optim.Adadelta(model.parameters(), lr=x)
 
         model.train()
-        for batch_idx, train_data, target in iter(train_loader):
+        for batch_idx, (train_data, target) in enumerate(train_loader):
             train_data, target = train_data.to(device), target.to(device)
             optimizer.zero_grad()
             output = model(train_data)
@@ -59,8 +109,8 @@ def wrap_scheduler(initial_lr, first_time, second_time):
 
 def objective(trial):
     initial_lr = trial.suggest_uniform('initial_lr', 0.001, 0.1)
-    first_time = trial.suggest_uniform('first_time', 0.1, 0.2)
-    second_time = trial.suggest_uniform('second_time', 0.4, 0.6)
+    first_time = trial.suggest_uniform('first_time', 0.2, 0.5)
+    second_time = trial.suggest_uniform('second_time', 0.7, 0.9)
     return wrap_scheduler(initial_lr, first_time, second_time)
 
 def wrap_lr(initial_lr, first_time, second_time,epoch):
@@ -95,20 +145,6 @@ def tune_hyperparams(args: Namespace, task: Task, preprocess_func: Compose, mode
     '''
 
     # TODO: Implement hyperparameter tuning
-    """
-    pbounds = {
-        'initial_lr': (0.001, 0.1),
-        'first_time': (0.1, 0.25),
-        'second_time': (0.35, 0.6),
-        'third_time': (0.65, 0.9)
-    }
-    print("start tuning ...")
-    bo = BayesianOptimization(f=wrap_scheduler, pbounds=pbounds)
-    # 最大化する
-    bo.maximize(init_points=5, n_iter=15)
-    # 結果を出力する
-    #print(bo.max)
-    """
 
     study = optuna.create_study()
     study.optimize(objective, n_trials=100)
@@ -116,13 +152,7 @@ def tune_hyperparams(args: Namespace, task: Task, preprocess_func: Compose, mode
     Hyperparams.hyperparam0 = study.best_params['initial_lr']
     Hyperparams.hyperparam1 = study.best_params['first_time']
     Hyperparams.hyperparam2 = study.best_params['second_time']
-    #Hyperparams.hyperparam0 = bo.max['params']['initial_lr']
-    #Hyperparam.hyperparam1 = bo.max['params']['first_time']
-    #Hyperparams.hyperparam2 = bo.max['params']['second_time']
-    #Hyperparams.hyperparam3 = bo.max['params']['third_time']
-
-    #hyperparams = Hyperparams()
-
+    
     param_list = [study.best_params['initial_lr'], study.best_params['first_time'], study.best_params['second_time']]
 
     return param_list
@@ -203,70 +233,23 @@ if __name__ == '__main__':
 
     epochs_num = args.epochs
 
-    def train(args, model, device, train_loader, optimizer, epoch):
-        model.train()
-        for batch_idx, (data, target) in enumerate(train_loader):
-            data, target = data.to(device), target.to(device)
-            optimizer.zero_grad()
-            output = model(data)
-            loss = F.nll_loss(output, target)
-            loss.backward()
-            optimizer.step()
-            if batch_idx % args.log_interval == 0:
-                print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
-                    epoch, batch_idx * len(data), len(train_loader.dataset),
-                    100. * batch_idx / len(train_loader), loss.item()))
-
-    def test(args, model, device, test_loader):
-        model.eval()
-        test_loss = 0
-        correct = 0
-        with torch.no_grad():
-            for data, target in test_loader:
-                data, target = data.to(device), target.to(device)
-                output = model(data)
-                # sum up batch loss
-                test_loss += F.nll_loss(output, target, reduction='sum').item()
-                # get the index of the max log-probability
-                pred = output.argmax(dim=1, keepdim=True)
-                correct += pred.eq(target.view_as(pred)).sum().item()
-
-        test_loss /= len(test_loader.dataset)
-
-        #return correct/len(test_loader.dataset)
-        print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
-            test_loss, correct, len(test_loader.dataset),
-            100. * correct / len(test_loader.dataset)))
-
     ############################################################
     # Instantiate task object
     task = Task(args.task)
 
     kwargs = {'num_workers': 1, 'pin_memory': True} if use_cuda else {}
-    train_loader = torch.utils.data.DataLoader(
-        datasets.CIFAR100('../data', train=True, download=True,
-                       transform=transforms.Compose([
-                           transforms.ToTensor(),
-                           transforms.Normalize((0.1307,), (0.3081,))
-                       ])),
-        batch_size=args.batch_size, shuffle=True, **kwargs)
-    test_loader = torch.utils.data.DataLoader(
-        datasets.CIFAR100('../data', train=False, transform=transforms.Compose([
-                           transforms.ToTensor(),
-                           transforms.Normalize((0.1307,), (0.3081,))
-                       ])),
-        batch_size=args.test_batch_size, shuffle=True, **kwargs)
 
-    n_samples = len(train_loader.dataset)
-    train_size = int(n_samples / 5)
-    subset1_indices = list(range(0,train_size))
-    subset2_indices = list(range(train_size,n_samples))
+    transform = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize((0.5,0.5,0.5),(0.5,0.5,0.5))])
 
-    train_dataset = Subset(train_loader.dataset, subset1_indices)
-    val_dataset   = Subset(train_loader.dataset, subset2_indices)
+    train_dataset = CifarDataset(transform, split='train', data_dir='/Users/kusakatakuya/mil-seminar2019/mil-seminar2019/data/cifar100')
+    val_dataset =  CifarDataset(transform, split='val', data_dir='/Users/kusakatakuya/mil-seminar2019/mil-seminar2019/data/cifar100')
+    test_dataset = CifarDataset(transform, split='test', data_dir='/Users/kusakatakuya/mil-seminar2019/mil-seminar2019/data/cifar100')
 
-    train_dataset_loader = torch.utils.data.DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
-    val_dataset_loader = torch.utils.data.DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False)
+    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
+    val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=args.batch_size, shuffle=True)
+    test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=args.batch_size, shuffle=True)
 
     # Dummy preprocess and model
     preprocess_func = Compose([transforms.ToTensor(), ])

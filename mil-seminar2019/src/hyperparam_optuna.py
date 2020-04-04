@@ -49,7 +49,7 @@ def test(args, model, device, test_loader):
         print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
             test_loss, correct, len(test_loader.dataset),
             100. * correct / len(test_loader.dataset)))
-
+"""
 def wrap_scheduler(initial_lr, first_time, second_time, third_time, epoch):
     first_epoch = int(epochs_num*first_time)
     second_epoch = int(epochs_num*second_time)
@@ -62,7 +62,7 @@ def wrap_scheduler(initial_lr, first_time, second_time, third_time, epoch):
         return initial_lr / 5
     elif epoch / epochs_num >third_time:
         return initial_lr / (5*5)
-
+"""
 def wrap_scheduler(initial_lr, first_time, second_time, third_time):
     accuracy = 0
     max_accuracy = 0
